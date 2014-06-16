@@ -3,9 +3,17 @@ import(tools, XML,
        graph, RBGL,
        gridGraphviz)
 
-export("writeModule", "input", "output", "src",
+export(# Module creation, reading, running
+       "writeModule", "input", "output", "src",
        "readModule",
-       "runModule",
+       "runModule", "makeInput",
+       # Pipeline creation, reading, running
        "writePipeline", "pipe",
        "readPipeline",
-       "runPipeline")
+       "runPipeline",
+       # Module/pipeline listings
+       "moduleTable")
+
+S3method("print", "module")
+S3method("print", "pipeline")
+S3method("plot", "pipeline")
