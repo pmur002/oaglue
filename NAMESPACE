@@ -12,7 +12,7 @@ export(# Module creation, reading, running
        "readPipeline",
        "runPipeline",
        # Module/pipeline listings
-       "moduleTable")
+       "moduleTable", "pipelineTable")
 
 S3method("print", "module")
 S3method("print", "pipeline")

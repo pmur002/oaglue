@@ -21,7 +21,7 @@ makeList <- function(path, element) {
 moduleInfo <- function(file, xml) {
     moduleName <- basename(file_path_sans_ext(file))
     m <- readXMLModule(xml, moduleName)
-    c(name=m$name, platform=m$platform)
+    c(name=m$name, platform=m$platform, description=m$desc)
 }
 
 moduleListInfo <- function(x) {
@@ -33,6 +33,16 @@ moduleTable <- function(paths) {
     fileList <- lapply(pathv, makeList, "module")
     moduleData <- lapply(fileList, moduleListInfo)
     do.call("rbind", moduleData)
+}
+
+pipelineInfo <- function(file, xml) {
+    pipelineName <- basename(file_path_sans_ext(file))
+    p <- readXMLPipeline(xml, pipelineName)
+    c(name=p$name, desc=p$desc)    
+}
+
+pipelineListInfo <- function(x) {
+    do.call("rbind", mapply(pipelineInfo, x$files, x$xml, SIMPLIFY=FALSE))
 }
 
 pipelineTable <- function(paths) {

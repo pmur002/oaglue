@@ -4,7 +4,7 @@ pipe <- function(srcmod, srcname, dstmod, dstname) {
          dst=c(module=dstmod, name=dstname))
 }
 
-pipeline <- function(name, modules=NULL, pipes) {
+pipeline <- function(name, modules=NULL, pipes, desc=NULL) {
     doc <- newXMLDoc(namespaces="http://www.openapi.org/2014/",
                      node=newXMLNode("pipeline", 
                          namespaceDefinitions="http://www.openapi.org/2014/"))
@@ -50,9 +50,13 @@ pipeline <- function(name, modules=NULL, pipes) {
                               }
                               newXMLNode("module", attrs=attrs)
                           },
-                          mnames, mrefs)        
+                          mnames, mrefs)
+    if (!is.null(desc)) {
+        desc <- newXMLNode("description",
+                           newXMLCDataNode(desc))
+    }
     addChildren(root,
-                kids=c(moduleNodes, pipeNodes))
+                kids=c(desc, moduleNodes, pipeNodes))
 }
 
 writePipeline <- function(name, ..., dir="XML") {
@@ -128,10 +132,15 @@ loadModule <- function(x) {
     }
 }
 
-readPipeline <- function(x) {
-    xml <- xmlParse(file.path("XML", paste0(x, ".xml")))
-    pipeline <- xmlRoot(xml)
-    pipelineName <- x
+readXMLPipeline <- function(x, name) {
+    pipeline <- xmlRoot(x)
+    descNodes <- getNodeSet(pipeline, "oa:desc",
+                            namespaces=c(oa="http://www.openapi.org/2014/"))
+    if (length(descNodes)) {
+        desc <- xmlValue(descNodes[[1]])
+    } else {
+        desc <- ""
+    }
     # Read the modules
     moduleNodes <- getNodeSet(pipeline, "oa:module",
                               namespaces=c(oa="http://www.openapi.org/2014/"))
@@ -158,13 +167,31 @@ readPipeline <- function(x) {
     graph <- pipelineGraph(moduleNames, pipes)
     order <- tsort(graph)
     # Build pipeline object
-    result <- list(name=pipelineName,
+    result <- list(name=name,
+                   desc=desc,
                    moduleOrder=order,
                    modules=modules,
                    graph=graph,
                    pipes=pipeInfo)
     class(result) <- "pipeline"
     result
+}
+
+readPipeline <- function(x, path="XML") {
+    name <- paste0(x, ".xml")
+    if (absPath(name)) {
+        file <- name
+    } else{
+        file <- findFile(name, path)
+        if (is.null(file))
+            stop("Unable to find pipeline")
+    }
+
+    pipelineName <- basename(file_path_sans_ext(file))
+
+    txt <- readRef(file)
+    xml <- xmlParse(txt, asText=TRUE)
+    readXMLPipeline(xml, pipelineName)
 }
 
 print.pipeline <- function(x, ...) {

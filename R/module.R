@@ -38,7 +38,7 @@ src <- function(src=NULL, ref=NULL, path=NULL, order=NULL) {
 
 module <- function(name, platform, 
                    inputs=NULL, outputs=NULL,
-                   src=NULL) {
+                   src=NULL, desc=NULL) {
     doc <- newXMLDoc(namespaces="http://www.openapi.org/2014/",
                      node=newXMLNode("module", 
                          namespaceDefinitions="http://www.openapi.org/2014/"))
@@ -70,10 +70,14 @@ module <- function(name, platform,
                                      attrs=i[-1]) # i[-"src"]
                       })
     }
+    if (!is.null(desc)) {
+        desc <- newXMLNode("description",
+                           newXMLCDataNode(desc))
+    }
     platform <- newXMLNode("platform",
                            attrs=c(name=platform))
     addChildren(root,
-                kids=list(platform, inputs, outputs, src))
+                kids=list(platform, desc, inputs, outputs, src))
     doc
 }
 
@@ -173,6 +177,14 @@ readXMLModule <- function(x, name) {
                                namespaces=c(oa="http://www.openapi.org/2014/"))
     platformName <- xmlGetAttr(platformNode[[1]], "name")
 
+    descNodes <- getNodeSet(module, "oa:description",
+                            namespaces=c(oa="http://www.openapi.org/2014/"))
+    if (length(descNodes)) {
+        descValue <- xmlValue(descNodes[[1]])
+    } else {
+        descValue <- ""
+    }
+                            
     sourceNodes <- getNodeSet(module, "oa:source",
                               namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(sourceNodes)) {
@@ -202,6 +214,7 @@ readXMLModule <- function(x, name) {
 
     result <- list(name=name,
                    platform=platformName,
+                   desc=descValue,
                    src=sourceValue,
                    inputs=inputs,
                    outputs=outputs)
