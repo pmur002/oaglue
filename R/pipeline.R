@@ -167,6 +167,19 @@ readPipeline <- function(x) {
     result
 }
 
+print.pipeline <- function(x, ...) {
+    cat("Name:", x$name, "\n")
+    cat(paste("    ", x$moduleOrder), sep="\n")
+}
+
+plot.pipeline <- function(x, ...) {
+    require(gridGraphviz)
+    rag <- agopenTrue(x$graph, "",
+                      attrs=list(node=
+                          list(shape="ellipse")))
+    grid.graph(rag)
+}
+
 resolveInputs <- function(modname, pipes, results) {
     if (is.null(results)) {
         return(NULL)
@@ -210,16 +223,8 @@ runPipeline <- function(x, inputs=NULL, filebase="./Pipelines") {
         #         rather than redoing every time AND by selecting only the
         #         relevant inputs to pass to runModule() each time
         inputs <- resolveInputs(m$name, x$pipes, modresults)
-        modresults <- rbind(modresults,
-                            runModule(m, inputs, filebase=modfilebase))
+        newresults <- runModule(m, inputs, filebase=modfilebase)
+        modresults <- rbind(modresults, newresults)
     }
-}
-
-plot.pipeline <- function(x, ...) {
-    require(gridGraphviz)
-    rag <- agopenTrue(x$graph, "",
-                      attrs=list(node=
-                          list(shape="ellipse")))
-    grid.graph(rag)
 }
 
