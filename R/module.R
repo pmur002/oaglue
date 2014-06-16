@@ -166,22 +166,9 @@ stackOutputs <- function(x) {
     do.call("rbind", regular)
 }
 
-readModule <- function(x, path="XML") {
-    name <- paste0(x, ".xml")
-    if (absPath(name)) {
-        file <- name
-    } else{
-        file <- findFile(name, path)
-        if (is.null(file))
-            stop("Unable to find module")
-    }
-
-    txt <- readRef(file)
-    xml <- xmlParse(txt, asText=TRUE)
-    module <- xmlRoot(xml)
+readXMLModule <- function(x, name) {
+    module <- xmlRoot(x)
     
-    moduleName <- basename(file_path_sans_ext(x))
-
     platformNode <- getNodeSet(module, "oa:platform",
                                namespaces=c(oa="http://www.openapi.org/2014/"))
     platformName <- xmlGetAttr(platformNode[[1]], "name")
@@ -213,13 +200,36 @@ readModule <- function(x, path="XML") {
         outputs <- NULL
     }
 
-    result <- list(name=moduleName,
+    result <- list(name=name,
                    platform=platformName,
                    src=sourceValue,
                    inputs=inputs,
                    outputs=outputs)
     class(result) <- "module"
     result
+}
+
+readModule <- function(x, path="XML") {
+    name <- paste0(x, ".xml")
+    if (absPath(name)) {
+        file <- name
+    } else{
+        file <- findFile(name, path)
+        if (is.null(file))
+            stop("Unable to find module")
+    }
+
+    moduleName <- basename(file_path_sans_ext(file))
+
+    txt <- readRef(file)
+    xml <- xmlParse(txt, asText=TRUE)
+    readXMLModule(xml, moduleName)
+}
+
+print.module <- function(x, ...) {
+    cat("Name:", x$name, "\n")
+    cat("  Inputs:", paste(x$inputs[, "name"], collapse=", "), "\n")
+    cat("  Outputs:", paste(x$outputs[, "name"], collapse=", "), "\n")
 }
 
 # Given a module (which includes its required inputs)
@@ -273,10 +283,8 @@ runModule <- function(x, inputs=NULL, filebase="./Modules") {
 # Convenience function to generate module, and run it to generate output,
 # and return reference to output to use as input for runModule()
 makeInput <- function(name, platform, src=NULL) {
-    modname <- paste0(".OA.temp.", name)
-    module(modname, platform, src=src,
-           outputs=output(name, "internal"))
-    result <- runModule(readModule(modname))
-    cbind(name=name, ref=result[, "ref"], type=result[, "type"])
+    writeModule(name, platform, src=src(src),
+                outputs=output(name, "internal"))
+    runModule(name)
 }
 
