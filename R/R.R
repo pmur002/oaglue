@@ -37,6 +37,10 @@ evalSource.R <- function(src, inputs, outputs, modpath) {
     
     cmd <- paste0("Rscript ", logfile)
     log(paste("#", cmd), logfile)
+
+    log("# Work in local environment so that functions are saved with env",
+        logfile)
+    log("local({", logfile)
     
     log("# Load module input", logfile)
     if (length(inputs)) {
@@ -56,6 +60,8 @@ evalSource.R <- function(src, inputs, outputs, modpath) {
     if (length(outputs)) {
         result <- t(apply(outputs, 1, saveROutput, modpath, logfile))
     }
+
+    log("}) # End local()", logfile)
     
     system(cmd)
 
