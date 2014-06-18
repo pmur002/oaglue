@@ -52,6 +52,44 @@ pipelineTable <- function(paths) {
     do.call("rbind", pipelineData)
 }
 
+pipelineHTML <- function(file, xml, outdir, outfile) {
+    pipelineName <- basename(file_path_sans_ext(file))
+    p <- readXMLPipeline(xml, pipelineName)
+    graphName <- paste0(pipelineName, ".svg")
+    graphFile <- file.path(outdir, graphName)
+    rag <- agopenTrue(p$graph, "", attrs=list(node=list(shape="ellipse")))
+    pdf(NULL, width=graphWidth(rag), height=graphHeight(rag))
+    grid.graph(rag)
+    grid.export(graphFile)
+    dev.off()
+    cat(paste('<tr><td style="border-style: solid; border-width: 1px">',
+              pipelineName,
+              '</td><td style="border-style: solid; border-width: 1px">',
+              p$desc,
+              '</td><td style="border-style: solid; border-width: 1px">',
+              "<img src='", graphName, "'/>",
+              "</tr>"),
+        file=file.path(outdir, outfile), append=TRUE)
+}
+
+pipelineToHTML <- function(x, dir, file) {
+    # Zero the file
+    writeLines("", file.path(dir, file))
+    cat('<table>', file=file.path(dir, file), append=TRUE)
+    mapply(pipelineHTML, x$files, x$xml, MoreArgs=list(dir, file))
+    cat("</table>", file=file.path(dir, file), append=TRUE)
+}
+
+pipelineHTMLTable <- function(paths, file="pipelines.html", dir="HTML") {
+    require(gridGraphviz)
+    require(gridSVG)
+    if (!file.exists(dir))
+        dir.create(dir)
+    pathv <- splitPath(paths)
+    fileList <- lapply(pathv, makeList, "pipeline")
+    lapply(fileList, pipelineToHTML, dir, file)
+}
+
 # Example usage ...
 #  library(googleVis)
 #  plot(gvisTable(as.data.frame(moduleTable("XML"))))
