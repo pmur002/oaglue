@@ -4,11 +4,11 @@ import(tools, XML,
        gridGraphviz)
 
 export(# Module creation, reading, running
-       "writeModule", "input", "output", "src",
+       "writeModule", "input", "output", "src", "module",
        "readModule",
        "runModule", "makeInput",
        # Pipeline creation, reading, running
-       "writePipeline", "pipe",
+       "writePipeline", "pipe", "pipeline",
        "readPipeline",
        "runPipeline",
        # Module/pipeline listings
