@@ -1,7 +1,7 @@
 
 pipe <- function(srcmod, srcname, dstmod, dstname) {
-    list(src=c(module=srcmod, name=srcname),
-         dst=c(module=dstmod, name=dstname))
+    list(src=c(module=unname(srcmod), name=unname(srcname)),
+         dst=c(module=unname(dstmod), name=unname(dstname)))
 }
 
 pipeline <- function(name, modules=NULL, pipes, desc=NULL) {
@@ -41,7 +41,7 @@ pipeline <- function(name, modules=NULL, pipes, desc=NULL) {
                                        })))
     extranames <- pipemnames[!pipemnames %in% mnames]
     mnames <- c(mnames, extranames)
-    mrefs <- c(mrefs, rep("", length(extranames)))
+    mrefs <- c(mrefs, rep("", length(mnames) - length(mrefs)))
     moduleNodes <- mapply(function(name, ref) {
                               if (nchar(ref)) {
                                   attrs <- c(name=name, ref=ref)
