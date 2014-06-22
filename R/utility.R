@@ -60,6 +60,9 @@ resolve <- function(x, modpath) {
             ref <- findFile(ref, path, cd=modpath)
         }
     }
+    if (is.null(ref)) {
+        stop("Failed to resolve reference")
+    }
     c(x[c("name", "type")], ref=ref)
 }
 
