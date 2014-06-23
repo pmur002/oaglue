@@ -55,13 +55,15 @@ resolve <- function(x, modpath) {
     if (!absPath(ref)) {
         path <- x["path"]
         if (is.na(path)) {
-            ref <- findFile(ref, cd=modpath)
+            foundRef <- findFile(ref, cd=modpath)
         } else {
-            ref <- findFile(ref, path, cd=modpath)
+            foundRef <- findFile(ref, path, cd=modpath)
         }
-    }
-    if (is.null(ref)) {
-        stop("Failed to resolve reference")
+        if (is.null(foundRef)) {
+            stop(paste("Failed to resolve reference:", ref))
+        } else {
+            ref <- foundRef
+        }
     }
     c(x[c("name", "type")], ref=ref)
 }
