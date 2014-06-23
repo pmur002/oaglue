@@ -253,5 +253,6 @@ runPipeline <- function(x, inputs=NULL, filebase="./Pipelines") {
         newresults <- runModule(m, inputs, filebase=modfilebase)
         modresults <- rbind(modresults, newresults)
     }
+    modresults
 }
 
