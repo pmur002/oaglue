@@ -6,7 +6,7 @@ pipe <- function(srcmod, srcname, dstmod, dstname) {
 
 pipeline <- function(name, modules=NULL, pipes, desc=NULL) {
     doc <- newXMLDoc(namespaces="http://www.openapi.org/2014/",
-                     node=newXMLNode("pipeline", 
+                     node=newXMLNode("pipeline", attrs=c(version="0.1"),
                          namespaceDefinitions="http://www.openapi.org/2014/"))
     root <- xmlRoot(doc)
     if (!is.null(pipes)) {
@@ -134,6 +134,7 @@ loadModule <- function(x) {
 
 readXMLPipeline <- function(x, name) {
     pipeline <- xmlRoot(x)
+    version <- xmlGetAttr(pipeline, "version")
     descNodes <- getNodeSet(pipeline, "oa:desc",
                             namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(descNodes)) {
@@ -168,6 +169,7 @@ readXMLPipeline <- function(x, name) {
     order <- tsort(graph)
     # Build pipeline object
     result <- list(name=name,
+                   version=version,
                    desc=desc,
                    moduleOrder=order,
                    modules=modules,

@@ -1,10 +1,10 @@
 
-input <- function(name, type="internal") {
-    c(name=name, type=type)
+input <- function(name, type="internal", dataType="") {
+    c(name=name, type=type, dataType=dataType)
 }
 
-output <- function(name, type="internal", ref=NULL, path=NULL) {
-    result <- c(name=name, type=type)
+output <- function(name, type="internal", dataType="", ref=NULL, path=NULL) {
+    result <- c(name=name, type=type, dataType=dataType)
     if (!is.null(ref)) {
         if (type == "internal")
             stop("'ref' must not be specified for internal output")
@@ -40,7 +40,7 @@ module <- function(name, platform,
                    inputs=NULL, outputs=NULL,
                    src=NULL, desc=NULL) {
     doc <- newXMLDoc(namespaces="http://www.openapi.org/2014/",
-                     node=newXMLNode("module", 
+                     node=newXMLNode("module", attrs=c(version="0.1"),
                          namespaceDefinitions="http://www.openapi.org/2014/"))
     root <- xmlRoot(doc)
     if (!is.null(inputs)) {
@@ -110,14 +110,16 @@ readSource <- function(x) {
 
 readInput <- function(x) {
     content <- c(name=xmlGetAttr(x, "name"),
-                 type=xmlGetAttr(x, "type"))
+                 type=xmlGetAttr(x, "type"),
+                 dataType=xmlGetAttr(x, "dataType"))
     content
 }
 
 readOutput <- function(x) {
     type <- xmlGetAttr(x, "type")
     content <- c(name=xmlGetAttr(x, "name"),
-                 type=type)
+                 type=type,
+                 dataType=xmlGetAttr(x, "dataType"))
     ref <- xmlGetAttr(x, "ref")
     path <- xmlGetAttr(x, "path")
     if (is.null(ref)) {
@@ -172,6 +174,8 @@ stackOutputs <- function(x) {
 
 readXMLModule <- function(x, name) {
     module <- xmlRoot(x)
+
+    version <- xmlGetAttr(module, "version")
     
     platformNode <- getNodeSet(module, "oa:platform",
                                namespaces=c(oa="http://www.openapi.org/2014/"))
@@ -213,6 +217,7 @@ readXMLModule <- function(x, name) {
     }
 
     result <- list(name=name,
+                   version=version,
                    platform=platformName,
                    desc=descValue,
                    src=sourceValue,
@@ -241,8 +246,16 @@ readModule <- function(x, path="XML") {
 
 print.module <- function(x, ...) {
     cat("Name:", x$name, "\n")
-    cat("  Inputs:", paste(x$inputs[, "name"], collapse=", "), "\n")
-    cat("  Outputs:", paste(x$outputs[, "name"], collapse=", "), "\n")
+    if (!is.null(x$inputs)) {
+        cat("  Inputs:", paste(paste0(x$inputs[, "name"],
+                                      " (", x$inputs[, "dataType"], ")"),
+                               collapse=", "), "\n")
+    }
+    if (!is.null(x$outputs)) {
+        cat("  Outputs:", paste(paste0(x$outputs[, "name"],
+                                       " (", x$outputs[, "dataType"], ")"),
+                                collapse=", "), "\n")
+    }
 }
 
 # Given a module (which includes its required inputs)
