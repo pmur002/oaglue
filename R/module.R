@@ -1,10 +1,10 @@
 
-input <- function(name, type="internal", dataType="") {
-    c(name=name, type=type, dataType=dataType)
+input <- function(name, type="internal", format="") {
+    c(name=name, type=type, format=format)
 }
 
-output <- function(name, type="internal", dataType="", ref=NULL, path=NULL) {
-    result <- c(name=name, type=type, dataType=dataType)
+output <- function(name, type="internal", format="", ref=NULL, path=NULL) {
+    result <- c(name=name, type=type, format=format)
     if (!is.null(ref)) {
         if (type == "internal")
             stop("'ref' must not be specified for internal output")
@@ -111,7 +111,7 @@ readSource <- function(x) {
 readInput <- function(x) {
     content <- c(name=xmlGetAttr(x, "name"),
                  type=xmlGetAttr(x, "type"),
-                 dataType=xmlGetAttr(x, "dataType"))
+                 format=xmlGetAttr(x, "format"))
     content
 }
 
@@ -119,7 +119,7 @@ readOutput <- function(x) {
     type <- xmlGetAttr(x, "type")
     content <- c(name=xmlGetAttr(x, "name"),
                  type=type,
-                 dataType=xmlGetAttr(x, "dataType"))
+                 format=xmlGetAttr(x, "format"))
     ref <- xmlGetAttr(x, "ref")
     path <- xmlGetAttr(x, "path")
     if (is.null(ref)) {
@@ -248,12 +248,12 @@ print.module <- function(x, ...) {
     cat("Name:", x$name, "\n")
     if (!is.null(x$inputs)) {
         cat("  Inputs:", paste(paste0(x$inputs[, "name"],
-                                      " (", x$inputs[, "dataType"], ")"),
+                                      " (", x$inputs[, "format"], ")"),
                                collapse=", "), "\n")
     }
     if (!is.null(x$outputs)) {
         cat("  Outputs:", paste(paste0(x$outputs[, "name"],
-                                       " (", x$outputs[, "dataType"], ")"),
+                                       " (", x$outputs[, "format"], ")"),
                                 collapse=", "), "\n")
     }
 }
