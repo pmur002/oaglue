@@ -6,10 +6,9 @@ savePythonOutput <- function(x, modpath, logfile) {
     if (type == "internal") {
         log(paste0("with open('", filename, "', 'wb') as f:"), logfile)
         log(paste0("\tpickle.dump(", name, ", f)"), logfile)
-        c(x[c("name", "type")], ref=filename)
-    } else {
-        x
+        x["ref"] <- filename
     }
+    x
 }
 
 loadPythonInput <- function(x, logfile) {

@@ -107,7 +107,7 @@ mergeInfo <- function(pipes, modules) {
                              if (is.null(m$outputs)) {
                                  NULL
                              } else {
-                                 cbind(m$outputs[, c("name", "type"),
+                                 cbind(m$outputs[, c("name", "type", "format", "formatType"),
                                                  drop=FALSE],
                                        module=m$name)
                              }
@@ -117,7 +117,7 @@ mergeInfo <- function(pipes, modules) {
     info <- as.matrix(merge(pipes, moduleInfo, all.x=TRUE,
                             by.x=c("srcmod", "srcname"),
                             by.y=c("module", "name")))
-    info[, c("srcmod", "srcname", "dstmod", "dstname", "type"), drop=FALSE]
+    info[, c("srcmod", "srcname", "dstmod", "dstname", "type", "format", "formatType"), drop=FALSE]
 }
 
 loadModule <- function(x) {
@@ -215,13 +215,13 @@ resolveInputs <- function(modname, pipes, results) {
     }
     modpipes <- pipes[pipes[, "dstmod"] == modname, , drop=FALSE]
     inputs <- merge(modpipes, results,
-                    by.x=c("srcmod", "srcname", "type"),
-                    by.y=c("modname", "name", "type"))
+                    by.x=c("srcmod", "srcname", "type", "format", "formatType"),
+                    by.y=c("modname", "name", "type", "format", "formatType"))
     if (nrow(inputs) == 0) {
         return(NULL)
     }
-    result <- inputs[, c("dstname", "type", "ref")]
-    names(result) <- c("name", "type", "ref")
+    result <- inputs[, c("dstname", "type", "ref", "format", "formatType")]
+    names(result) <- c("name", "type", "ref", "format", "formatType")
     result
 }
 

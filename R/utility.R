@@ -65,7 +65,8 @@ resolve <- function(x, modpath) {
             ref <- foundRef
         }
     }
-    c(x[c("name", "type")], ref=ref)
+    x["ref"] <- ref
+    x
 }
 
 resolveOutput <- function(x, modpath) {

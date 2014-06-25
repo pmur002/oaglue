@@ -12,10 +12,9 @@ saveROutput <- function(x, modpath, logfile) {
     type <- as.character(x["type"])
     if (type == "internal") {
         logExpr_q(substitute(saveRDS(x, y), list(x=name, y=filename)), logfile)
-        c(x[c("name", "type")], ref=filename)
-    } else {
-        x
+        x["ref"] <- filename
     }
+    x
 }
 
 loadRInput <- function(x, logfile) {

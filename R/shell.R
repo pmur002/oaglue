@@ -12,10 +12,9 @@ saveShellOutput <- function(x, modpath, logfile) {
     type <- as.character(x["type"])
     if (type == "internal") {
         log(paste0("echo ${", name, "} > ", filename), logfile)
-        c(x[c("name", "type")], ref=filename)
-    } else {
-        x
+        x["ref"] <- filename
     }
+    x
 }
 
 loadShellInput <- function(x, logfile) {

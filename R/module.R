@@ -1,10 +1,34 @@
 
-input <- function(name, type="internal", format="") {
-    c(name=name, type=type, format=format)
+# 'x' should be a character vector, but it can be of length
+# greater than 1, so can be arbitrarily complex.
+# 'type' can be used to indicate whether the format is more
+# than just arbitrary text, e.g., "XML Schema" or "DTD"
+format <- function(x, type=NULL) {
+    # Collapse 'x' to single value if necessary
+    result <- c(format=paste(x, collapse="\n"))
+    if (!is.null(type))
+        result <- c(result, formatType=type)
+    class(result) <- ".OA.format"
+    result
 }
 
-output <- function(name, type="internal", format="", ref=NULL, path=NULL) {
-    result <- c(name=name, type=type, format=format)
+input <- function(name, type="internal", format=NULL) {
+    result <- c(name=name, type=type)
+    if (!is.null(format)) {
+        if (!inherits(format, ".OA.format"))
+            stop("Invalid format")
+        result <- c(result, format)
+    }
+    result
+}
+
+output <- function(name, type="internal", format=NULL, ref=NULL, path=NULL) {
+    result <- c(name=name, type=type)
+    if (!is.null(format)) {
+        if (!inherits(format, ".OA.format"))
+            stop("Invalid format")
+        result <- c(result, format)        
+    }
     if (!is.null(ref)) {
         if (type == "internal")
             stop("'ref' must not be specified for internal output")
@@ -34,6 +58,38 @@ src <- function(src=NULL, ref=NULL, path=NULL, order=NULL) {
         result <- c(result, order=order)
     }
     result
+}
+
+formatElement <- function(x) {
+    if (!is.na(x["formatType"])) {
+        fnode <- newXMLNode("format",
+                            x["format"],
+                            attrs=c(type=unname(x["formatType"])))
+    } else {
+        fnode <- newXMLNode("format", x["format"])
+    }
+    fnode
+}
+
+inputElement <- function(x) {
+    names <- names(x)
+    inode <- newXMLNode("input", attrs=x[names %in% c("name", "type")])
+    formatInfo <- x[!names %in% c("name", "type")]
+    if (length(formatInfo)) {
+        addChildren(inode, formatElement(formatInfo))
+    }
+    inode
+}
+
+outputElement <- function(x) {
+    names <- names(x)
+    onode <- newXMLNode("output",
+                        attrs=x[names %in% c("name", "type", "ref", "path")])
+    formatInfo <- x[!names %in% c("name", "type", "ref", "path")]
+    if (length(formatInfo)) {
+        addChildren(onode, formatElement(formatInfo))
+    }
+    onode
 }
 
 module <- function(name, platform, 
@@ -108,10 +164,27 @@ readSource <- function(x) {
     sourceValue
 }
 
+readFormat <- function(x) {
+    formatNode <- getNodeSet(x, "format",
+                             namespaces=c(oa="http://www.openapi.org/2014/"))
+    if (length(formatNode)) {
+        format <- c(format=xmlValue(formatNode[[1]]))
+        formatType <- xmlGetAttr(format, "type")
+        if (is.null(formatType)) {
+            format <- c(format, formatType="text")
+        } else {
+            format <- c(format, formatType=formatType)
+        } 
+    } else {
+        format <- c(format="", formatType="text")
+    }
+    format
+}
+
 readInput <- function(x) {
     content <- c(name=xmlGetAttr(x, "name"),
-                 type=xmlGetAttr(x, "type"),
-                 format=xmlGetAttr(x, "format"))
+                 type=xmlGetAttr(x, "type"))
+    content <- c(content, readFormat(x))
     content
 }
 
@@ -120,6 +193,7 @@ readOutput <- function(x) {
     content <- c(name=xmlGetAttr(x, "name"),
                  type=type,
                  format=xmlGetAttr(x, "format"))
+    content <- c(content, readFormat(x))
     ref <- xmlGetAttr(x, "ref")
     path <- xmlGetAttr(x, "path")
     if (is.null(ref)) {
@@ -247,32 +321,19 @@ readModule <- function(x, path="XML") {
 print.module <- function(x, ...) {
     cat("Name:", x$name, "\n")
     if (!is.null(x$inputs)) {
-        cat("  Inputs:", paste(paste0(x$inputs[, "name"],
-                                      " (", x$inputs[, "format"], ")"),
+        inputFormat <- ifelse(x$inputs[, "formatType"] == "text",
+                              x$inputs[, "format"], x$inputs[, "formatType"])
+        cat("  Inputs:", paste(paste0(x$inputs[, "name"], 
+                                       " (", inputFormat, ")"),
                                collapse=", "), "\n")
     }
     if (!is.null(x$outputs)) {
+        outputFormat <- ifelse(x$outputs[, "formatType"] == "text",
+                               x$outputs[, "format"], x$outputs[, "formatType"])
         cat("  Outputs:", paste(paste0(x$outputs[, "name"],
-                                       " (", x$outputs[, "format"], ")"),
+                                       " (", outputFormat, ")"),
                                 collapse=", "), "\n")
     }
-}
-
-# Given a module (which includes its required inputs)
-# AND the result of running a module
-# AND pipe information,
-# match inputs to results
-# (to provide the information on inputs that are required
-#  to run the module)
-composeInputs <- function(x, results, pipeInfo) {
-    start <- merge(results, pipeInfo,
-                   by.x=c("modname", "name"),
-                   by.y=c("startmod", "startname"))
-    end <- merge(cbind(modname=x$name, x$inputs),
-                 start[, c("ref", "endmod", "endname", "type")],
-                 by.x=c("modname", "name", "type"),
-                 by.y=c("endmod", "endname", "type"))
-    end[, c("name", "type", "ref")]
 }
 
 evalSource <- function(src, inputs, outputs, modpath) {
