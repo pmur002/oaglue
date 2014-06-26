@@ -20,7 +20,8 @@ makeList <- function(path, element) {
 
 moduleInfo <- function(file, xml) {
     moduleName <- basename(file_path_sans_ext(file))
-    m <- readXMLModule(xml, moduleName)
+    modulePath <- dirname(file)
+    m <- readXMLModule(xml, moduleName, modulePath)
     c(name=m$name, platform=m$platform, description=m$desc)
 }
 

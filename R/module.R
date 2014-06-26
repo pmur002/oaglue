@@ -142,7 +142,7 @@ writeModule <- function(name, ..., dir="XML") {
     saveXML(module, file.path(dir, paste0(name, ".xml")))    
 }
 
-readSource <- function(x) {
+readSource <- function(x, modpath) {
     ref <- xmlGetAttr(x, "ref")
     path <- xmlGetAttr(x, "path")
     if (is.null(ref)) {
@@ -152,9 +152,9 @@ readSource <- function(x) {
             file <- ref
         } else {
             if (is.null(path)) {
-                file <- findFile(ref)
+                file <- findFile(ref, cd=modpath)
             } else {
-                file <- findFile(ref, path)
+                file <- findFile(ref, path, cd=modpath)
             }
             if (is.null(file)) 
                 warning("Module source not found")
@@ -246,7 +246,7 @@ stackOutputs <- function(x) {
     do.call("rbind", regular)
 }
 
-readXMLModule <- function(x, name) {
+readXMLModule <- function(x, name, modpath) {
     module <- xmlRoot(x)
 
     version <- xmlGetAttr(module, "version")
@@ -267,7 +267,7 @@ readXMLModule <- function(x, name) {
                               namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(sourceNodes)) {
         order <- sourceOrder(sourceNodes)    
-        sourceValue <- unlist(lapply(sourceNodes[order], readSource))
+        sourceValue <- unlist(lapply(sourceNodes[order], readSource, modpath))
     } else {
         sourceValue <- ""
     }
@@ -312,10 +312,11 @@ readModule <- function(x, path="XML") {
     }
 
     moduleName <- basename(file_path_sans_ext(file))
-
+    modulePath <- dirname(file)
+    
     txt <- readRef(file)
     xml <- xmlParse(txt, asText=TRUE)
-    readXMLModule(xml, moduleName)
+    readXMLModule(xml, moduleName, modulePath)
 }
 
 print.module <- function(x, ...) {
