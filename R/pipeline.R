@@ -205,13 +205,13 @@ inputs.pipeline <- function(x, ..., all=FALSE) {
         if (all(fedInputs)) {
             NULL
         } else {
-            allInputs[!fedInputs, ]
+            allInputs[!fedInputs, , drop=FALSE]
         }
     }
 }
 
 outputs.pipeline <- function(x, ..., all=FALSE) {
-    allOutputs <- do.call("rbind", lapply(x$modules, outputs))
+    allOutputs <- stackOutputs(lapply(x$modules, outputs))
     if (all) {
         allOutputs
     } else {
@@ -219,7 +219,7 @@ outputs.pipeline <- function(x, ..., all=FALSE) {
         if (all(consumedOutputs)) {
             NULL
         } else {
-            allOutputs[!consumedOutputs, ]
+            allOutputs[!consumedOutputs, , drop=FALSE]
         }
     }
 }
