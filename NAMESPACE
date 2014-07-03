@@ -4,15 +4,22 @@ import(tools, XML,
        gridGraphviz)
 
 export(# Module creation, reading, running
-       "writeModule", "input", "output", "src", "module",
+       "writeModule", "input", "output", "src", "module", "makeInput",
        "readModule",
-       "runModule", "makeInput",
+       "runModule", 
        # Pipeline creation, reading, running
        "writePipeline", "pipe", "pipeline",
        "readPipeline",
        "runPipeline",
+       # Module/pipeline reflection
+       "inputs", "outputs",
        # Module/pipeline listings
        "moduleTable", "pipelineTable")
+
+S3method("inputs", "module")
+S3method("inputs", "pipeline")
+S3method("outputs", "module")
+S3method("outputs", "pipeline")
 
 S3method("print", "module")
 S3method("print", "pipeline")

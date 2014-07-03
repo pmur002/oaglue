@@ -319,6 +319,22 @@ readModule <- function(x, path="XML") {
     readXMLModule(xml, moduleName, modulePath)
 }
 
+inputs <- function(x, ...) {
+    UseMethod("inputs")
+}
+
+inputs.module <- function(x, ...) {
+    x$inputs
+}
+
+outputs <- function(x, ...) {
+    UseMethod("outputs")
+}
+
+outputs.module <- function(x, ...) {
+    x$outputs
+}
+
 print.module <- function(x, ...) {
     cat("Name:", x$name, "\n")
     if (!is.null(x$inputs)) {

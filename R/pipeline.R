@@ -196,6 +196,34 @@ readPipeline <- function(x, path="XML") {
     readXMLPipeline(xml, pipelineName)
 }
 
+inputs.pipeline <- function(x, ..., all=FALSE) {
+    allInputs <- do.call("rbind", lapply(x$modules, inputs))
+    if (all) {
+        allInputs
+    } else {
+        fedInputs <- allInputs[, "name"] %in% x$pipes[, "dstname"]
+        if (all(fedInputs)) {
+            NULL
+        } else {
+            allInputs[!fedInputs, ]
+        }
+    }
+}
+
+outputs.pipeline <- function(x, ..., all=FALSE) {
+    allOutputs <- do.call("rbind", lapply(x$modules, outputs))
+    if (all) {
+        allOutputs
+    } else {
+        consumedOutputs <- allOutputs[, "name"] %in% x$pipes[, "srcname"]
+        if (all(consumedOutputs)) {
+            NULL
+        } else {
+            allOutputs[!consumedOutputs, ]
+        }
+    }
+}
+
 print.pipeline <- function(x, ...) {
     cat("Name:", x$name, "\n")
     cat(paste("    ", x$moduleOrder), sep="\n")
