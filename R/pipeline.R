@@ -13,9 +13,9 @@ pipeline <- function(name, modules=NULL, pipes, desc=NULL) {
         pipeNodes <- lapply(pipes,
                             function(p) {
                                 newXMLNode("pipe",
-                                           newXMLNode("source",
+                                           newXMLNode("start",
                                                       attrs=p$src),
-                                           newXMLNode("destination",
+                                           newXMLNode("end",
                                                       attrs=p$dst))
                             })
     }
@@ -84,9 +84,9 @@ pipelineGraph <- function(modules, pipes) {
 }
 
 readPipe <- function(x) {
-    src <- getNodeSet(x, "oa:source",
+    src <- getNodeSet(x, "oa:start",
                       namespaces=c(oa="http://www.openapi.org/2014/"))
-    dst <- getNodeSet(x, "oa:destination",
+    dst <- getNodeSet(x, "oa:end",
                       namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(src) && length(dst)) {
         src <- src[[1]]
