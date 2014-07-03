@@ -380,7 +380,7 @@ runModule <- function(x, inputs=NULL, filebase="./Modules") {
     if (is.null(result)) {
         result
     } else {
-        cbind(modname=modname, result)
+        cbind(compname=modname, result)
     }
 }
 
