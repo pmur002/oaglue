@@ -3,7 +3,7 @@
 
 # We need a special function because, although simple http:// URLs
 # can be handled just like local file paths, https:// cannot,
-# so we need at least one special case\
+# so we need at least one special case
 
 # NOTE that although we claim to handle URLs as well as local files,
 # we can only handle URLs to STATIC resources;  this is not an
@@ -12,6 +12,8 @@
 fileType <- function(x) {
     if (grepl("^ *https://", x))
         "https"
+    else if (grepl("^ *http://", x))
+        "http"
     else
         "plain"
 }
@@ -20,7 +22,7 @@ readFile <- function(x) {
     UseMethod("readFile")
 }
 
-readFile.plain <- function(x) {
+readFile.default <- function(x) {
     readLines(x)
 }
 

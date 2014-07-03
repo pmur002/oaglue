@@ -50,9 +50,33 @@ initOA <- function() {
     initPath()
 }
 
+fileExists <- function(x) {
+    UseMethod("fileExists")
+}
+
+fileExists.plain <- function(x) {
+    file.exists(x)
+}
+
+fileExists.http <- function(x) {
+    require("RCurl")
+    url.exists(x)
+}
+
+fileExists.https <- fileExists.http
+
+refExists <- function(x) {
+    ft <- fileType(x)
+    class(x) <- c(ft, class(x))
+    fileExists(x)
+}
+
 resolve <- function(x, modpath) {
-    ref <- suppressWarnings(normalizePath(x["ref"]))
-    if (!absPath(ref)) {
+    ref <- x["ref"]
+    if (absPath(ref)) {
+        if (!refExists(ref))
+            stop(paste("Reference does not exist:", ref))
+    } else {
         path <- x["path"]
         if (is.na(path)) {
             foundRef <- findFile(ref, cd=modpath)
