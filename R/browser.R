@@ -38,7 +38,8 @@ moduleTable <- function(paths) {
 
 pipelineInfo <- function(file, xml) {
     pipelineName <- basename(file_path_sans_ext(file))
-    p <- readXMLPipeline(xml, pipelineName)
+    pipelinePath <- dirname(file)
+    p <- readXMLPipeline(xml, pipelineName, pipelinePath)
     c(name=p$name, desc=p$desc)    
 }
 

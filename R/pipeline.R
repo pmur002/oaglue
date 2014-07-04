@@ -122,12 +122,12 @@ mergeInfo <- function(pipes, components) {
          drop=FALSE]
 }
 
-readComponent <- function(x, path="XML") {
+readComponent <- function(x, pipepath) {
     name <- paste0(x, ".xml")
     if (absPath(name)) {
         file <- name
     } else{
-        file <- findFile(name, path)
+        file <- findFile(name, cd=pipepath)
         if (is.null(file))
             stop("Unable to find component")
     }
@@ -139,27 +139,27 @@ readComponent <- function(x, path="XML") {
     componentType <- xmlName(xmlRoot(xml))
 
     if (componentType == "module") {
-        readXMLModule(xml, componentName)
+        readXMLModule(xml, componentName, pipepath)
     } else if (componentType == "pipeline") {
-        readXMLPipeline(xml, componentName)
+        readXMLPipeline(xml, componentName, pipepath)
     } else {
         stop("Invalid component")
     }
 }
 
-loadComponent <- function(x) {
+loadComponent <- function(x, pipepath) {
     # If the component only has a 'name', use that to read the module
     # If the component has a 'ref', use that to read the module
     name <- xmlGetAttr(x, "name")
     ref <- xmlGetAttr(x, "ref")
     if (is.null(ref)) {
-        readComponent(name)
+        readComponent(name, pipepath)
     } else {
-        readComponent(ref)
+        readComponent(ref, pipepath)
     }
 }
 
-readXMLPipeline <- function(x, name) {
+readXMLPipeline <- function(x, name, pipepath) {
     pipeline <- xmlRoot(x)
     version <- xmlGetAttr(pipeline, "version")
     descNodes <- getNodeSet(pipeline, "oa:desc",
@@ -174,7 +174,7 @@ readXMLPipeline <- function(x, name) {
                               namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(componentNodes)) {
         componentNames <- sapply(componentNodes, xmlGetAttr, "name")
-        components <- lapply(componentNodes, loadComponent)
+        components <- lapply(componentNodes, loadComponent, pipepath)
         names(components) <- componentNames
     } else {
         stop("Pipeline has no components")
@@ -217,10 +217,11 @@ readPipeline <- function(x, path="XML") {
     }
 
     pipelineName <- basename(file_path_sans_ext(file))
-
+    pipelinePath <- dirname(file)
+        
     txt <- readRef(file)
     xml <- xmlParse(txt, asText=TRUE)
-    readXMLPipeline(xml, pipelineName)
+    readXMLPipeline(xml, pipelineName, pipelinePath)
 }
 
 inputs.pipeline <- function(x, ..., all=FALSE) {
