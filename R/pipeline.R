@@ -129,7 +129,8 @@ readComponent <- function(x, pipepath) {
     } else{
         file <- findFile(name, cd=pipepath)
         if (is.null(file))
-            stop("Unable to find component")
+            stop(paste0("Unable to find component ", name,
+                        " (cd: ", pipepath, ")"))
     }
 
     componentName <- basename(file_path_sans_ext(file))
@@ -162,7 +163,7 @@ loadComponent <- function(x, pipepath) {
 readXMLPipeline <- function(x, name, pipepath) {
     pipeline <- xmlRoot(x)
     version <- xmlGetAttr(pipeline, "version")
-    descNodes <- getNodeSet(pipeline, "oa:desc",
+    descNodes <- getNodeSet(pipeline, "oa:description",
                             namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(descNodes)) {
         desc <- xmlValue(descNodes[[1]])

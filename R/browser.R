@@ -40,7 +40,7 @@ pipelineInfo <- function(file, xml) {
     pipelineName <- basename(file_path_sans_ext(file))
     pipelinePath <- dirname(file)
     p <- readXMLPipeline(xml, pipelineName, pipelinePath)
-    c(name=p$name, desc=p$desc)    
+    c(name=p$name, description=p$desc)    
 }
 
 pipelineListInfo <- function(x) {
