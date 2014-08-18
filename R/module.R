@@ -92,7 +92,7 @@ outputElement <- function(x) {
     onode
 }
 
-module <- function(name, platform, 
+module <- function(platform, 
                    inputs=NULL, outputs=NULL,
                    src=NULL, desc=NULL) {
     doc <- newXMLDoc(namespaces="http://www.openapi.org/2014/",
@@ -137,9 +137,9 @@ module <- function(name, platform,
     doc
 }
 
-writeModule <- function(name, ..., dir="XML") {
-    module <- module(name, ...)
-    saveXML(module, file.path(dir, paste0(name, ".xml")))    
+writeModule <- function(filename, ..., dir="XML") {
+    module <- module(...)
+    saveXML(module, file.path(dir, filename)) 
 }
 
 readSource <- function(x, modpath) {
@@ -246,7 +246,7 @@ stackOutputs <- function(x) {
     do.call("rbind", regular)
 }
 
-readXMLModule <- function(x, name, modpath) {
+readXMLModule <- function(x, modpath) {
     module <- xmlRoot(x)
 
     version <- xmlGetAttr(module, "version")
@@ -290,8 +290,7 @@ readXMLModule <- function(x, name, modpath) {
         outputs <- NULL
     }
 
-    result <- list(name=name,
-                   version=version,
+    result <- list(version=version,
                    platform=platformName,
                    desc=descValue,
                    src=sourceValue,
@@ -301,22 +300,20 @@ readXMLModule <- function(x, name, modpath) {
     result
 }
 
-readModule <- function(x, path="XML") {
-    name <- paste0(x, ".xml")
-    if (absPath(name)) {
-        file <- name
+readModule <- function(filename, path="XML") {
+    if (absPath(filename)) {
+        file <- filename
     } else{
-        file <- findFile(name, path)
+        file <- findFile(filename, path)
         if (is.null(file))
             stop("Unable to find module")
     }
 
-    moduleName <- basename(file_path_sans_ext(file))
     modulePath <- dirname(file)
     
     txt <- readRef(file)
     xml <- xmlParse(txt, asText=TRUE)
-    readXMLModule(xml, moduleName, modulePath)
+    readXMLModule(xml, modulePath)
 }
 
 inputs <- function(x, ...) {
@@ -336,7 +333,6 @@ outputs.module <- function(x, ...) {
 }
 
 print.module <- function(x, ...) {
-    cat("Name:", x$name, "\n")
     if (!is.null(x$inputs)) {
         inputFormat <- ifelse(x$inputs[, "formatType"] == "text",
                               x$inputs[, "format"], x$inputs[, "formatType"])
@@ -357,16 +353,26 @@ evalSource <- function(src, inputs, outputs, modpath) {
     UseMethod("evalSource")
 }
 
-runModule <- function(x, inputs=NULL, filebase="./Modules") {
+runModule <- function(x, name=NULL, inputs=NULL, filebase="./Modules") {
+    modname <- name
     # 'x' may be just module name for convenience
-    if (!inherits(x, "module") && is.character(x))
+    if (inherits(x, "module")) {
+        if (is.null(modname)) {
+            modname <- deparse(substitute(x))
+        }
+    } else if (is.character(x)) {
+        if (is.null(modname)) {
+            modname <- nameFromFilename(x)
+        }
         x <- readModule(x)
+    } else {
+        stop("Invalid module")
+    }
     
     # create a directory for module output
     if (!file.exists(filebase)) {
         dir.create(filebase)
     }
-    modname <- x$name
     modpath <- file.path(filebase, modname)
     if (file.exists(modpath))
         unlink(modpath, recursive=TRUE)

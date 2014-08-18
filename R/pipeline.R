@@ -1,10 +1,38 @@
 
-pipe <- function(src, srcname, dst, dstname) {
-    list(src=c(component=unname(src), name=unname(srcname)),
-         dst=c(component=unname(dst), name=unname(dstname)))
+start <- function(oname, mref=NA, mname=NA, pref=NA, pname=NA) {
+    # Need exactly ONE of module or pipeline ref name
+    if ((is.na(mref) + is.na(mname) + is.na(pref) + is.na(pname)) != 3)
+        stop("Invalid pipe start")
+    c(outputName=oname, moduleRef=mref, moduleName=mname,
+      pipelineRef=pref, pipelineName=pname)
 }
 
-pipeline <- function(name, components=NULL, pipes, desc=NULL) {
+end <- function(iname, mref=NA, mname=NA, pref=NA, pname=NA) {
+    # Need exactly ONE of module or pipeline ref name
+    if ((is.na(mref) + is.na(mname) + is.na(pref) + is.na(pname)) != 3)
+        stop("Invalid pipe end")
+    c(inputName=iname, moduleRef=mref, moduleName=mname,
+      pipelineRef=pref, pipelineName=pname)
+}
+
+pipe <- function(start, end) {
+    list(src=start, dst=end)
+}
+
+moduleRef <- function(filename, name=NA) {
+    c(moduleRef=filename, moduleName=name, pipelineRef=NA, pipelineName=NA)
+}
+
+pipelineRef <- function(filename, name=NA) {
+    c(moduleName=NA, moduleRef=NA, pipelineRef=filename, pipelineName=name)
+}
+
+# Strip NA elements
+strip <- function(x) {
+    x[!is.na(x)]
+}
+
+pipeline <- function(components=NULL, pipes, desc=NULL) {
     doc <- newXMLDoc(namespaces="http://www.openapi.org/2014/",
                      node=newXMLNode("pipeline", attrs=c(version="0.1"),
                          namespaceDefinitions="http://www.openapi.org/2014/"))
@@ -14,43 +42,35 @@ pipeline <- function(name, components=NULL, pipes, desc=NULL) {
                             function(p) {
                                 newXMLNode("pipe",
                                            newXMLNode("start",
-                                                      attrs=p$src),
+                                                      attrs=strip(p$src)),
                                            newXMLNode("end",
-                                                      attrs=p$dst))
+                                                      attrs=strip(p$dst)))
                             })
     }
-    if (!is.null(components)) {
-        cnames <- names(components)
-        if (is.null(cnames)) {
-            crefs <- NULL
-            cnames <- components
-        } else {
-            isref <- nchar(cnames)
-            crefs <- ifelse(isref, components, "")
-            cnames <- ifelse(isref, cnames, components)
-        }
+    if (is.null(components)) {
+        compInfo <- NULL
     } else {
-        cnames <- NULL
-        crefs <- NULL
+        compInfo <- do.call(rbind, components)
     }
-    # Add implicit components from pipes
-    pipecnames <- unique(unlist(lapply(pipes,
-                                       function(p) {
-                                           c(p$src["component"],
-                                             p$dst["component"])
-                                       })))
-    extranames <- pipecnames[!pipecnames %in% cnames]
-    cnames <- c(cnames, extranames)
-    crefs <- c(crefs, rep("", length(cnames) - length(crefs)))
-    componentNodes <- mapply(function(name, ref) {
-                                 if (nchar(ref)) {
-                                     attrs <- c(name=name, ref=ref)
-                                 } else {
-                                     attrs <- c(name=name)
-                                 }
-                                 newXMLNode("component", attrs=attrs)
-                             },
-                             cnames, crefs)
+    if (!is.null(pipes)) {
+        pipeInfo <- do.call(rbind,
+                            lapply(pipes,
+                                   function(x) rbind(x$src[-1], x$dst[-1])))
+        # Only interested in '*Ref' pipes
+        # ('*Name' pipes have to have a component that resolves '*Ref')
+        pipeInfo <- pipeInfo[!(is.na(pipeInfo[, "moduleRef"]) &
+                               is.na(pipeInfo[, "pipelineRef"])), ]
+        compInfo <- unique(rbind(compInfo, pipeInfo))
+    }
+    if (is.null(compInfo)) {
+        componentNodes <- NULL
+    } else {
+        componentNodes <- apply(compInfo, 1,
+                                function(x) {
+                                    newXMLNode("component",
+                                               attrs=strip(x))
+                                })
+    }
     if (!is.null(desc)) {
         desc <- newXMLNode("description",
                            newXMLCDataNode(desc))
@@ -59,9 +79,9 @@ pipeline <- function(name, components=NULL, pipes, desc=NULL) {
                 kids=c(desc, componentNodes, pipeNodes))
 }
 
-writePipeline <- function(name, ..., dir="XML") {
-    pipeline <- pipeline(name, ...)
-    saveXML(pipeline, file.path(dir, paste0(name, ".xml")))    
+writePipeline <- function(filename, ..., dir="XML") {
+    pipeline <- pipeline(...)
+    saveXML(pipeline, file.path(dir, filename))    
 }
 
 require(RBGL)
@@ -91,10 +111,10 @@ readPipe <- function(x) {
     if (length(src) && length(dst)) {
         src <- src[[1]]
         dst <- dst[[1]]
-        c(src=xmlGetAttr(src, "component"),
-          srcname=xmlGetAttr(src, "name"),
-          dst=xmlGetAttr(dst, "component"),
-          dstname=xmlGetAttr(dst, "name"))
+        c(src=getComponentName(src),
+          srcname=xmlGetAttr(src, "outputName"),
+          dst=getComponentName(dst),
+          dstname=xmlGetAttr(dst, "inputName"))
     } else {
         stop("Invalid pipe")
     }
@@ -107,12 +127,13 @@ mergeInfo <- function(pipes, components) {
                              if (is.null(outputs(c))) {
                                  NULL
                              } else {
-                                 cbind(outputs(c)[, c("name", "type", "format", "formatType"),
-                                                 drop=FALSE],
-                                       component=c$name)
+                                 outputs(c)[, c("name", "type",
+                                                "format", "formatType"),
+                                            drop=FALSE]
                              }
                          })
-    componentInfo <- do.call("rbind", outputInfo)
+    componentInfo <- cbind(do.call("rbind", outputInfo),
+                           component=names(components))
     # Merge module input/output info with pipe output info
     info <- as.matrix(merge(pipes, componentInfo, all.x=TRUE,
                             by.x=c("src", "srcname"),
@@ -122,45 +143,37 @@ mergeInfo <- function(pipes, components) {
          drop=FALSE]
 }
 
-readComponent <- function(x, pipepath) {
-    name <- paste0(x, ".xml")
-    if (absPath(name)) {
-        file <- name
-    } else{
-        file <- findFile(name, cd=pipepath)
-        if (is.null(file))
-            stop(paste0("Unable to find component ", name,
-                        " (cd: ", pipepath, ")"))
-    }
-
-    componentName <- basename(file_path_sans_ext(file))
-
-    txt <- readRef(file)
-    xml <- xmlParse(txt, asText=TRUE)
-    componentType <- xmlName(xmlRoot(xml))
-
-    if (componentType == "module") {
-        readXMLModule(xml, componentName, pipepath)
-    } else if (componentType == "pipeline") {
-        readXMLPipeline(xml, componentName, pipepath)
-    } else {
-        stop("Invalid component")
-    }
-}
-
 loadComponent <- function(x, pipepath) {
-    # If the component only has a 'name', use that to read the module
-    # If the component has a 'ref', use that to read the module
-    name <- xmlGetAttr(x, "name")
-    ref <- xmlGetAttr(x, "ref")
-    if (is.null(ref)) {
-        readComponent(name, pipepath)
+    mref <- xmlGetAttr(x, "moduleRef")
+    if (is.null(mref)) {
+        pref <- xmlGetAttr(x, "pipelineRef")
+        readPipeline(pref, pipepath)
     } else {
-        readComponent(ref, pipepath)
+        readModule(mref, pipepath)
     }
 }
 
-readXMLPipeline <- function(x, name, pipepath) {
+getComponentName <- function(x) {
+    mref <- xmlGetAttr(x, "moduleRef")
+    mname <- xmlGetAttr(x, "moduleName")
+    if (is.null(mref) && is.null(mname)) {
+        pref <- xmlGetAttr(x, "pipelineRef")
+        pname <- xmlGetAttr(x, "pipelineName")
+        if (is.null(pname)) {
+            nameFromFilename(pref)
+        } else {
+            pname
+        }
+    } else {
+        if (is.null(mname)) {
+            nameFromFilename(mref)
+        } else {
+            mname
+        }
+    }
+}
+
+readXMLPipeline <- function(x, pipepath) {
     pipeline <- xmlRoot(x)
     version <- xmlGetAttr(pipeline, "version")
     descNodes <- getNodeSet(pipeline, "oa:description",
@@ -171,10 +184,11 @@ readXMLPipeline <- function(x, name, pipepath) {
         desc <- ""
     }
     # Read the components
-    componentNodes <- getNodeSet(pipeline, "oa:component",
-                              namespaces=c(oa="http://www.openapi.org/2014/"))
+    componentNodes <-
+        getNodeSet(pipeline, "oa:component",
+                   namespaces=c(oa="http://www.openapi.org/2014/"))
     if (length(componentNodes)) {
-        componentNames <- sapply(componentNodes, xmlGetAttr, "name")
+        componentNames <- sapply(componentNodes, getComponentName)
         components <- lapply(componentNodes, loadComponent, pipepath)
         names(components) <- componentNames
     } else {
@@ -196,8 +210,7 @@ readXMLPipeline <- function(x, name, pipepath) {
     graph <- pipelineGraph(componentNames, pipes)
     order <- tsort(graph)
     # Build pipeline object
-    result <- list(name=name,
-                   version=version,
+    result <- list(version=version,
                    desc=desc,
                    componentOrder=order,
                    components=components,
@@ -207,22 +220,20 @@ readXMLPipeline <- function(x, name, pipepath) {
     result
 }
 
-readPipeline <- function(x, path="XML") {
-    name <- paste0(x, ".xml")
-    if (absPath(name)) {
-        file <- name
+readPipeline <- function(filename, path="XML") {
+    if (absPath(filename)) {
+        file <- filename
     } else{
-        file <- findFile(name, path)
+        file <- findFile(filename, path)
         if (is.null(file))
             stop("Unable to find pipeline")
     }
 
-    pipelineName <- basename(file_path_sans_ext(file))
     pipelinePath <- dirname(file)
         
     txt <- readRef(file)
     xml <- xmlParse(txt, asText=TRUE)
-    readXMLPipeline(xml, pipelineName, pipelinePath)
+    readXMLPipeline(xml, pipelinePath)
 }
 
 inputs.pipeline <- function(x, ..., all=FALSE) {
@@ -294,16 +305,26 @@ runComponent.pipeline <- function(x, ...) {
     runPipeline(x, ...)
 }
 
-runPipeline <- function(x, inputs=NULL, filebase="./Pipelines") {
+runPipeline <- function(x, name=NULL, inputs=NULL, filebase="./Pipelines") {
+    pipename <- name
     # 'x' may be just pipeline name for convenience
-    if (!inherits(x, "pipeline") && is.character(x))
+    if (inherits(x, "pipeline")) {
+        if (is.null(pipename)) {
+            pipename <- deparse(substitute(x))
+        }
+    } else if (is.character(x)) {
+        if (is.null(pipename)) {
+            pipename <- nameFromFilename(x)
+        }
         x <- readPipeline(x)
+    } else {
+        stop("Invalid pipeline")
+    }
     
     # create a directory for pipeline output
     if (!file.exists(filebase)) {
         dir.create(filebase)
     }
-    pipename <- x$name
     pipepath <- file.path(filebase, pipename)
     if (file.exists(pipepath))
         unlink(pipepath, recursive=TRUE)
@@ -316,12 +337,13 @@ runPipeline <- function(x, inputs=NULL, filebase="./Pipelines") {
     if (n == 0)
         return()
     for (i in 1:n) {
-        c <- x$components[[x$componentOrder[i]]]
+        cname <- x$componentOrder[i]
+        c <- x$components[[cname]]
         # FIXME:  efficiency could be gained by incrementally updating inputs
         #         rather than redoing every time AND by selecting only the
         #         relevant inputs to pass to runModule() each time
-        inputs <- resolveInputs(c$name, x$pipes, compresults)
-        newresults <- runComponent(c, inputs, filebase=compfilebase)
+        inputs <- resolveInputs(cname, x$pipes, compresults)
+        newresults <- runComponent(c, cname, inputs, filebase=compfilebase)
         compresults <- rbind(compresults, newresults)
     }
     # "rename" results to reflect fact that they are outputs from this pipeline

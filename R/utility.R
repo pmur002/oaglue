@@ -100,3 +100,7 @@ resolveOutput <- function(x, modpath) {
         t(apply(x, 1, resolve, modpath))
     }
 }
+
+nameFromFilename <- function(x) {
+    basename(file_path_sans_ext(x))
+}

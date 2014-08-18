@@ -55,8 +55,10 @@ findFileInPath <- function(x, path, recurse) {
     nm <- length(matches)
     if (nm > 0) {
         if (nm > 1)
-            warning(paste(paste("More than one matching resource for", x),
-                          files[matches], collapse="\n"))
+            warning(paste(paste0("More than one matching resource for ",
+                                 x, ":"),
+                          paste("    ", files[matches], collapse="\n"),
+                          collapse="\n"))
         files[matches[1]]
     } else {
         NULL
